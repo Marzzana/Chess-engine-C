@@ -16,8 +16,8 @@ static const uint64_t h_file_rank_1 = 0x80808080808080FFULL;
 static const uint64_t h_file_rank_8 = 0xFF80808080808080ULL;
 
 typedef uint64_t (*SINGLE_ATTACK_FUNC)(int sq, uint64_t blockers_config);
-enum Max_Bits_In_Mask {MAX_BITS_IN_MASK = 12};
-enum Squares_x_Blocker_Configs {SQUARES_x_BLOCKER_CONFIGS_ROOK = 102400, 
+enum max_bits_in_mask {MAX_BITS_IN_MASK = 12};
+enum squares_x_blocker_configs {SQUARES_x_BLOCKER_CONFIGS_ROOK = 102400, 
                                 SQUARES_x_BLOCKER_CONFIGS_BISHOP = 5248};
 
 static uint64_t rand_state = 123456789ULL;

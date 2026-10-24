@@ -6,7 +6,7 @@
 
 static const char piece_dict[13] = "PNBRQKpnbrqk";
 
-struct Position {
+struct position {
     uint64_t pieces[COLOR_TYPES][PIECE_TYPES];
     uint64_t occupancy[COLOR_TYPES];
     uint64_t all;
@@ -18,12 +18,21 @@ struct Position {
     int fullmove_clock;
 };
 
-struct Position FEN_to_Position(char* fen);
-uint64_t sq_attackers(const struct Position* position, int sq, int attacking_color);
+struct prev_pos_info {
+    int piece_last_captured;
+    int prev_castling_rights;
+    int prev_en_passant;
+    int prev_halfmove_clock;
+};
 
-void make(struct Position* position, MOVE move);
-void unmake(struct Position* position, MOVE move);
+struct position FEN_to_position(const char* fen);
+void init_castling_rights_by_sq(void);
+uint64_t sq_attackers(const struct position* position, int sq, int attacking_color);
+int is_king_in_check(const struct position* position, int color);
 
-void print_position(const struct Position* position);
+void make(struct position* position, MOVE move, struct prev_pos_info* prev_pos_info);
+void unmake(struct position* position, MOVE last_move, const struct prev_pos_info* prev_pos_info);
+
+void print_position(const struct position* position);
 void print_bitboard(uint64_t bitboard);
-void print_position_metadata(const struct Position* position);
+void print_position_metadata(const struct position* position);

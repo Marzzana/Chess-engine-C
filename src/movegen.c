@@ -1,7 +1,7 @@
 #include "movegen.h"
 #include "attacks.h"
 
-//CONSTANTS-DEFINITIONS
+//CONSTANTS-DEFINITIONS-DATA STRUCTURES
 static const uint64_t rank_1 = 0x00000000000000FFULL;
 static const uint64_t rank_2 = 0x000000000000FF00ULL;
 static const uint64_t rank_4 = 0x00000000FF000000ULL;
@@ -12,7 +12,7 @@ static const uint64_t rank_8 = 0xFF00000000000000ULL;
 
 //PRIVATE FUNCTIONS
 //king castling-handling helpers
-static int can_castle_kingside(const struct Position* position)
+static int can_castle_kingside(const struct position* position)
 {
     int my_color = position->side_to_play;
     int opposite_color = (my_color + 1) % 2;
@@ -34,7 +34,7 @@ static int can_castle_kingside(const struct Position* position)
 
     return 1;
 }
-static int can_castle_queenside(const struct Position* position)
+static int can_castle_queenside(const struct position* position)
 {
     int my_color = position->side_to_play;
     int opposite_color = (my_color + 1) % 2;
@@ -59,7 +59,7 @@ static int can_castle_queenside(const struct Position* position)
 }
 
 //pawn helpers
-static void gen_white_pawns_simple_moves(const struct Position* position, struct Moves* moves)
+static void gen_white_pawns_simple_moves(const struct position* position, struct moves* moves)
 {
     uint64_t pawns_bitboard = position->pieces[WHITE][PAWN];
 
@@ -92,7 +92,7 @@ static void gen_white_pawns_simple_moves(const struct Position* position, struct
         pawns_2_foward_targets &= (pawns_2_foward_targets - 1);
     }
 }
-static void gen_white_pawns_promotion_moves(const struct Position* position, struct Moves* moves)
+static void gen_white_pawns_promotion_moves(const struct position* position, struct moves* moves)
 {
     uint64_t pawns_bitboard = position->pieces[WHITE][PAWN];
 
@@ -111,7 +111,7 @@ static void gen_white_pawns_promotion_moves(const struct Position* position, str
         pawns_targets_for_promotion &= (pawns_targets_for_promotion - 1);
     }
 }
-static void gen_black_pawns_simple_moves(const struct Position* position, struct Moves* moves)
+static void gen_black_pawns_simple_moves(const struct position* position, struct moves* moves)
 {
     uint64_t pawns_bitboard = position->pieces[BLACK][PAWN];
 
@@ -144,7 +144,7 @@ static void gen_black_pawns_simple_moves(const struct Position* position, struct
         pawns_2_foward_targets &= (pawns_2_foward_targets - 1);
     }
 }
-static void gen_black_pawns_promotion_moves(const struct Position* position, struct Moves* moves)
+static void gen_black_pawns_promotion_moves(const struct position* position, struct moves* moves)
 {
     uint64_t pawns_bitboard = position->pieces[BLACK][PAWN];
 
@@ -164,7 +164,7 @@ static void gen_black_pawns_promotion_moves(const struct Position* position, str
         pawns_targets_for_promotion &= (pawns_targets_for_promotion - 1);
     }
 }
-static void gen_pawns_simple_captures(const struct Position* position, struct Moves* moves)
+static void gen_pawns_simple_captures(const struct position* position, struct moves* moves)
 {
     int my_color = position->side_to_play;
     int opposite_color = (my_color + 1) % 2;
@@ -188,7 +188,7 @@ static void gen_pawns_simple_captures(const struct Position* position, struct Mo
         pawns_bitboard &= (pawns_bitboard - 1);
     }
 }
-static void gen_pawns_capture_promotions(const struct Position* position, struct Moves* moves)
+static void gen_pawns_capture_promotions(const struct position* position, struct moves* moves)
 {
     int my_color = position->side_to_play;
     int opposite_color = (my_color + 1) % 2;
@@ -215,7 +215,7 @@ static void gen_pawns_capture_promotions(const struct Position* position, struct
         pawns_bitboard &= (pawns_bitboard - 1);
     }
 }
-static void gen_pawns_en_passant_moves(const struct Position* position, struct Moves* moves)
+static void gen_pawns_en_passant_moves(const struct position* position, struct moves* moves)
 {
     int my_color = position->side_to_play;
 
@@ -241,7 +241,7 @@ static void gen_pawns_en_passant_moves(const struct Position* position, struct M
 }
 
 //move generators
-static void generate_king_moves(const struct Position* position, struct Moves* moves)
+static void generate_king_moves(const struct position* position, struct moves* moves)
 {
     int my_color = position->side_to_play;
     int start_sq = __builtin_ctzll(position->pieces[my_color][KING]);
@@ -268,7 +268,7 @@ static void generate_king_moves(const struct Position* position, struct Moves* m
         moves->new_move_index++;
     }
 }
-static void generate_knights_moves(const struct Position* position, struct Moves* moves)
+static void generate_knights_moves(const struct position* position, struct moves* moves)
 {
     int my_color = position->side_to_play;
     
@@ -289,7 +289,7 @@ static void generate_knights_moves(const struct Position* position, struct Moves
         knights_bitboard &= (knights_bitboard - 1);
     }
 }
-static void generate_rooks_moves(const struct Position* position, struct Moves* moves)
+static void generate_rooks_moves(const struct position* position, struct moves* moves)
 {
     int my_color = position->side_to_play;
 
@@ -310,7 +310,7 @@ static void generate_rooks_moves(const struct Position* position, struct Moves* 
         rooks_bitboard &= (rooks_bitboard - 1);
     }
 }
-static void generate_bishops_moves(const struct Position* position, struct Moves* moves)
+static void generate_bishops_moves(const struct position* position, struct moves* moves)
 {
     int my_color = position->side_to_play;
 
@@ -331,7 +331,7 @@ static void generate_bishops_moves(const struct Position* position, struct Moves
         bishops_bitboard &= (bishops_bitboard - 1);
     }
 }
-static void generate_queens_moves(const struct Position* position, struct Moves* moves)
+static void generate_queens_moves(const struct position* position, struct moves* moves)
 {
     int my_color = position->side_to_play;
 
@@ -352,7 +352,7 @@ static void generate_queens_moves(const struct Position* position, struct Moves*
         queens_bitboard &= (queens_bitboard - 1);
     }
 }
-static void generate_pawns_moves(const struct Position* position, struct Moves* moves)
+static void generate_pawns_moves(const struct position* position, struct moves* moves)
 {
     int my_color = position->side_to_play;
 
@@ -375,7 +375,7 @@ static void generate_pawns_moves(const struct Position* position, struct Moves* 
 
 
 //PUBLIC FUNCTIONS
-void generate_moves(const struct Position* position, struct Moves* moves)
+void generate_moves(const struct position* position, struct moves* moves)
 {
     moves->new_move_index = 0;
 

@@ -1,6 +1,6 @@
 #DEFINITIONS
 CC := gcc
-CFLAGS := -Wall -Iinclude
+CFLAGS := -Wall -Iinclude -O2
 
 SRC_DIR := src
 TEST_DIR := tests

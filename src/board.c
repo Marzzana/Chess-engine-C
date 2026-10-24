@@ -8,17 +8,11 @@
 
 //CONSTANTS-DEFINITIONS-DATA STRUCTURES
 static int castling_rights_by_sq[SQUARES] = {0};
-struct prev_pos_info {
-    int piece_last_moved;
-    int piece_last_captured;
-    int origin_sq;
-    int new_sq;
-    MOVE last_move_type;
-};
+
 
 //PRIVATE FUNCTIONS
 //position setters
-static char* set_boards(struct Position* position, char* fen)
+static char* set_boards(struct position* position, char* fen)
 {
     int rank = 7;
     int file = 0;
@@ -80,7 +74,7 @@ static char* set_boards(struct Position* position, char* fen)
     
     return ++fen;
 }
-static char* set_side_to_play(struct Position* position, char* fen)
+static char* set_side_to_play(struct position* position, char* fen)
 {
     if (*fen == 'w') 
         position->side_to_play = WHITE;
@@ -89,7 +83,7 @@ static char* set_side_to_play(struct Position* position, char* fen)
 
     return fen += 2;
 }
-static char* set_castling_rights(struct Position* position, char* fen)
+static char* set_castling_rights(struct position* position, char* fen)
 {
     position->castling_rights = 0;
 
@@ -105,7 +99,7 @@ static char* set_castling_rights(struct Position* position, char* fen)
     }
     return ++fen;
 }
-static char* set_en_passant(struct Position* position, char* fen)
+static char* set_en_passant(struct position* position, char* fen)
 {
     if (*fen == '-') {
         position->en_passant = -1;
@@ -119,7 +113,7 @@ static char* set_en_passant(struct Position* position, char* fen)
     
     return fen += 2;
 }
-static char* set_halfmove_clock(struct Position* position, char* fen)
+static char* set_halfmove_clock(struct position* position, char* fen)
 {
     position->halfmove_clock = atoi(fen);
 
@@ -127,20 +121,20 @@ static char* set_halfmove_clock(struct Position* position, char* fen)
         fen++;
     return ++fen;
 }
-static void set_fullmove_clock(struct Position* position, char* fen)
+static void set_fullmove_clock(struct position* position, char* fen)
 {
     position->fullmove_clock = atoi(fen);
 }
 
 //make and unmake helper functions
-static void remove_piece_from_sq(struct Position* position, int piece, int piece_color, int sq)
+static void remove_piece_from_sq(struct position* position, int piece, int piece_color, int sq)
 {
     position->pieces[piece_color][piece] &= ~(1ULL << sq);
     position->occupancy[piece_color] &= ~(1ULL << sq);
     position->all &= ~(1ULL << sq);
     position->mailbox[sq] = EMPTY;
 }
-static void put_piece_on_sq(struct Position* position, int piece, int piece_color, int sq)
+static void put_piece_on_sq(struct position* position, int piece, int piece_color, int sq)
 {
     position->pieces[piece_color][piece] |= (1ULL << sq);
     position->occupancy[piece_color] |= (1ULL << sq);
@@ -165,7 +159,7 @@ void init_castling_rights_by_sq(void)
                                             | BLACK_KINGSIDE | BLACK_QUEENSIDE; break;
         }  
 }
-uint64_t sq_attackers(const struct Position* position, int sq, int attacking_color)
+uint64_t sq_attackers(const struct position* position, int sq, int attacking_color)
 {
     uint64_t sq_attackers_bitboard = 0;
 
@@ -200,11 +194,17 @@ uint64_t sq_attackers(const struct Position* position, int sq, int attacking_col
 
     return sq_attackers_bitboard;
 }
+int is_king_in_check(const struct position* position, int color)
+{
+    int opposite_color = (color + 1) % 2;
+    int king_sq = __builtin_ctzll(position->pieces[color][KING]);
+    return sq_attackers(position, king_sq, opposite_color) != 0;
+}
 
 //position initializer and manipulators
-struct Position FEN_to_Position(char* fen)
+struct position FEN_to_position(const char* fen)
 {
-    struct Position position = {0};
+    struct position position = {0};
 
     fen = set_boards(&position, fen);
     fen = set_side_to_play(&position, fen);
@@ -215,7 +215,7 @@ struct Position FEN_to_Position(char* fen)
 
     return position;
 }
-void make(struct Position* position, MOVE move)
+void make(struct position* position, MOVE move, struct prev_pos_info* prev_pos_info)
 {
     //parsing move
     int start_sq = (move >> 0) & ((1 << 6) - 1);
@@ -223,11 +223,16 @@ void make(struct Position* position, MOVE move)
     int move_type = (move >> 12) & ((1 << 2) - 1);
     int promotion_piece = ((move >> 14) & ((1 << 2) - 1)) + KNIGHT;
     
+    //useful variables + saving lost metadata (for unmake)
     int my_color = position->side_to_play;
     int opposite_color = (my_color + 1) % 2;
     int pawn_forward_step = 8 * (1 + (my_color * -2)); //relevant for en passant maintaining
     int piece_to_move = position->mailbox[start_sq] - (PIECE_TYPES * my_color);
     int piece_to_capture = position->mailbox[target_sq]; //raw - without adjusting to PIECE_TYPES
+    prev_pos_info->piece_last_captured = EMPTY;
+    prev_pos_info->prev_castling_rights = position->castling_rights;
+    prev_pos_info->prev_en_passant = position->en_passant;
+    prev_pos_info->prev_halfmove_clock = position->halfmove_clock;
 
     //updating position
     //(1) updating 50-move-draw clocks
@@ -247,6 +252,7 @@ void make(struct Position* position, MOVE move)
     
     if (piece_to_capture != EMPTY) { //if piece_to_capture exists handling
         piece_to_capture -= (PIECE_TYPES * opposite_color);
+        prev_pos_info->piece_last_captured = piece_to_capture; //saving lost info
         remove_piece_from_sq(position, piece_to_capture, opposite_color, target_sq);
     }
     put_piece_on_sq(position, piece_to_move, my_color, target_sq);
@@ -286,6 +292,70 @@ void make(struct Position* position, MOVE move)
     //updating castling_rights
     position->castling_rights &= castling_rights_by_sq[start_sq] & castling_rights_by_sq[target_sq];
 }
+void unmake(struct position* position, MOVE last_move, const struct prev_pos_info* prev_pos_info)
+{
+    //parsing move
+    int origin_sq = (last_move >> 0) & ((1 << 6) - 1);
+    int curr_sq = (last_move >> 6) & ((1 << 6) - 1);
+    int move_type = (last_move >> 12) & ((1 << 2) - 1);
+
+    //useful variables
+    int curr_color = position->side_to_play;
+    int last_color = (curr_color + 1) % 2;
+    int pawn_forward_step = 8 * (1 + (last_color * -2)); //relevant for en passant maintaining
+    int piece_last_moved = position->mailbox[curr_sq] - (PIECE_TYPES * last_color);
+    //prev position lost info
+    int piece_last_captured = prev_pos_info->piece_last_captured; //raw - without adjusting to PIECE_TYPES
+    int prev_castling_rights = prev_pos_info->prev_castling_rights;
+    int prev_en_passant_sq = prev_pos_info->prev_en_passant;
+    int prev_halfmove_clock = prev_pos_info->prev_halfmove_clock;
+
+    //updating position
+    //(1) reverting 50-move-draw clocks
+    position->halfmove_clock = prev_halfmove_clock;
+    if (last_color == BLACK)
+        position->fullmove_clock--;
+
+    //(2) reverting to previous position bitboards
+    remove_piece_from_sq(position, piece_last_moved, last_color, curr_sq);
+    if (piece_last_captured != EMPTY)
+        put_piece_on_sq(position, piece_last_captured, curr_color, curr_sq);
+    
+    if (move_type == MOVE_EN_PASSANT) {
+        int original_pawn_captured_en_passant_sq = curr_sq - pawn_forward_step;
+        put_piece_on_sq(position, PAWN, curr_color, original_pawn_captured_en_passant_sq);
+    }
+    
+    if (move_type == MOVE_PROMOTION)
+        piece_last_moved = PAWN;
+    put_piece_on_sq(position, piece_last_moved, last_color, origin_sq);
+
+    if (move_type == MOVE_CASTLING) { //revert rook bitboards
+        int rook_origin_sq = 0;
+        int rook_curr_sq = 0;
+
+        switch (curr_sq) {
+        case G1: rook_origin_sq = H1; rook_curr_sq = F1; break;
+        case C1: rook_origin_sq = A1; rook_curr_sq = D1; break;
+        case G8: rook_origin_sq = H8; rook_curr_sq = F8; break;
+        case C8: rook_origin_sq = A8; rook_curr_sq = D8; break;
+        default: break;
+        }
+
+        remove_piece_from_sq(position, ROOK, last_color, rook_curr_sq);
+        put_piece_on_sq(position, ROOK, last_color, rook_origin_sq);
+    }
+
+    //(3) reverting other position metadata
+    //reverting side_to_play
+    position->side_to_play = last_color;
+    
+    //updating en_passant
+    position->en_passant = prev_en_passant_sq;
+
+    //updating castling_rights
+    position->castling_rights = prev_castling_rights;
+}
 
 //board printing functions
 void print_bitboard(uint64_t bitboard)
@@ -304,7 +374,7 @@ void print_bitboard(uint64_t bitboard)
         printf("\n");
     }
 }
-void print_position_metadata(const struct Position* position)
+void print_position_metadata(const struct position* position)
 {
     printf("side to play - %d \n", position->side_to_play);
     printf("castling rights - %d \n", position->castling_rights);
@@ -312,7 +382,7 @@ void print_position_metadata(const struct Position* position)
     printf("halfmove clock - %d \n", position->halfmove_clock);
     printf("fullmove clock - %d \n", position->fullmove_clock);
 }
-void print_position(const struct Position* position)
+void print_position(const struct position* position)
 {
     for (int rank = 7; rank >= 0; rank--) {
         for (int file = 0; file <= 7; file++) {

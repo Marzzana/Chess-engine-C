@@ -3,12 +3,12 @@
 #include <stdint.h>
 
 typedef uint16_t MOVE;
-enum Move_Type {MOVE_SIMPLE, MOVE_PROMOTION, MOVE_EN_PASSANT, MOVE_CASTLING};
+enum move_type {MOVE_SIMPLE, MOVE_PROMOTION, MOVE_EN_PASSANT, MOVE_CASTLING};
 
-enum Pieces {EMPTY = -1, PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING, PIECE_TYPES};
-enum Color {WHITE, BLACK, COLOR_TYPES};
-enum Castling {WHITE_KINGSIDE = 1, WHITE_QUEENSIDE = 2, BLACK_KINGSIDE = 4, BLACK_QUEENSIDE = 8};
-enum Squares {A1, B1, C1, D1, E1, F1, G1, H1,
+enum pieces {EMPTY = -1, PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING, PIECE_TYPES};
+enum color {WHITE, BLACK, COLOR_TYPES};
+enum castling {WHITE_KINGSIDE = 1, WHITE_QUEENSIDE = 2, BLACK_KINGSIDE = 4, BLACK_QUEENSIDE = 8};
+enum squares {A1, B1, C1, D1, E1, F1, G1, H1,
               A2, B2, C2, D2, E2, F2, G2, H2,
               A3, B3, C3, D3, E3, F3, G3, H3,
               A4, B4, C4, D4, E4, F4, G4, H4,
